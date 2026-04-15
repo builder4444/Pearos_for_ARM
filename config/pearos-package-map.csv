@@ -1,0 +1,14 @@
+feature,pearos_behavior,open_source_equivalent,apt_packages,notes
+Desktop shell,macOS-like panel+menu,XFCE desktop + whisker menu,"xfce4 xfce4-goodies xfce4-whiskermenu-plugin",Lightweight and stable on ARM64
+Display/login,graphical login and autologin,LightDM with GTK greeter,"lightdm lightdm-gtk-greeter",Simple autologin to pi user
+Dock,bottom application dock,Plank,"plank",Widely available on Debian arm64
+GTK theme,bright macOS-inspired styling,WhiteSur GTK theme (from source),"gtk2-engines-murrine sassc",Theme source cloned during build
+Icon theme,macOS-like icons,WhiteSur icon theme (from source),"papirus-icon-theme",Fallback icons plus WhiteSur icon set
+Cursor theme,modern cursor style,Bibata cursor theme,"bibata-cursor-theme",Available in Debian repos
+Window manager effects,basic compositing and shadows,XFWM4 compositor,"xfwm4",Low overhead compared to GNOME Shell
+Launcher/search,application launcher,Whisker Menu,"xfce4-whiskermenu-plugin",Keyboard launcher mapped to Super key
+Default browser,web browsing,Firefox ESR,"firefox-esr",Stable security updates
+File manager,finder-like file browsing,Thunar,"thunar thunar-archive-plugin",Native XFCE integration
+Terminal,terminal emulator,XFCE Terminal,"xfce4-terminal",Lightweight
+Software store,basic package install UI,Synaptic,"synaptic",Optional graphical package manager
+Audio mixer,sound controls,pavucontrol,"pavucontrol",PulseAudio/PipeWire frontend

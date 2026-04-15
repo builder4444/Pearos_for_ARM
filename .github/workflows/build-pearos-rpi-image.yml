@@ -1,0 +1,51 @@
+name: Build PearOS-like Raspberry Pi Image
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build-image:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache theme source downloads
+        uses: actions/cache@v4
+        with:
+          path: .cache/theme-sources
+          key: ${{ runner.os }}-theme-sources-${{ hashFiles('scripts/retrieve_sources.sh') }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            coreutils quilt parted qemu-user-static debootstrap zerofree zip \
+            dosfstools libarchive-tools libcap2-bin rsync xz-utils file git curl \
+            bc bison flex libssl-dev make kmod cpio
+
+      - name: Build ARM64 image
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/build-image.sh
+
+      - name: Generate checksums
+        run: |
+          cd out
+          sha256sum * > SHA256SUMS
+
+      - name: Upload image artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pearos-like-rpi-image
+          path: |
+            out/*
+          if-no-files-found: error
+          retention-days: 14
