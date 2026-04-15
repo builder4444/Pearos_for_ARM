@@ -1,0 +1,26 @@
+# Base desktop + login manager
+xserver-xorg
+xfce4
+xfce4-goodies
+lightdm
+lightdm-gtk-greeter
+
+# PearOS-like UX components
+plank
+xfce4-whiskermenu-plugin
+
+# Theme dependencies / fallbacks
+git
+curl
+ca-certificates
+papirus-icon-theme
+bibata-cursor-theme
+gtk2-engines-murrine
+sassc
+
+# Default apps
+firefox-esr
+thunar-archive-plugin
+xfce4-terminal
+pavucontrol
+synaptic
