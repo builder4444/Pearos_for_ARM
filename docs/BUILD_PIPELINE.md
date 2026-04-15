@@ -52,7 +52,7 @@ This prevents failures like:
 Workflow `.github/workflows/build-pearos-rpi-image.yml`:
 
 - Triggers on `push` and `workflow_dispatch`.
-- Installs builder dependencies.
-- Runs `./scripts/build-image.sh`.
+- Runs the build inside a `--privileged` Debian container because pi-gen needs root for mount/chroot/loop device operations.
+- Installs builder dependencies inside that container and runs `./scripts/build-image.sh`.
 - Generates SHA256 checksums.
 - Uploads generated image artifacts.

@@ -40,8 +40,27 @@ DISABLE_FIRST_BOOT_USER_RENAME=1
 STAGE_LIST='stage0 stage1 stage2 stage-pearos'
 CFG
 
+# pi-gen requires root privileges for mount/chroot/loop device operations.
+# Preferred CI path is to run this whole script in a privileged container.
+# Fallback for non-container local runs: use sudo for the pi-gen invocation.
+run_pi_gen_build() {
+  if [[ "${EUID}" -eq 0 ]]; then
+    ./build.sh
+    return 0
+  fi
+
+  if command -v sudo >/dev/null 2>&1; then
+    echo "[WARN] build-image.sh is not running as root; using sudo for pi-gen build"
+    sudo ./build.sh
+    return 0
+  fi
+
+  echo "[ERROR] pi-gen requires root privileges. Run in a privileged container or use sudo."
+  return 1
+}
+
 pushd "${PI_GEN_DIR}" >/dev/null
-./build.sh
+run_pi_gen_build
 popd >/dev/null
 
 mkdir -p "${ROOT_DIR}/out"

@@ -9,6 +9,7 @@ This repository provides a fully automated pipeline that builds a **bootable Ras
 - **Desktop stack**: XFCE + LightDM + Plank.
 - **PearOS-like styling**: WhiteSur GTK + WhiteSur icons + curated wallpapers.
 - **CI**: GitHub Actions workflow produces compressed image artifacts and checksums.
+- **Privilege model**: CI runs build steps in a `--privileged` Docker container so pi-gen can perform chroot/mount/loop operations.
 
 ## Directory structure
 

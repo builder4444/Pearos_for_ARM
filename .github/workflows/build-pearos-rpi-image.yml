@@ -23,18 +23,35 @@ jobs:
           path: .cache/theme-sources
           key: ${{ runner.os }}-theme-sources-${{ hashFiles('scripts/retrieve_sources.sh') }}
 
-      - name: Install build dependencies
+      - name: Verify Docker availability
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            coreutils quilt parted qemu-user-static debootstrap zerofree zip \
-            dosfstools libarchive-tools libcap2-bin rsync xz-utils file git curl \
-            bc bison flex libssl-dev make kmod cpio
+          docker --version
 
-      - name: Build ARM64 image
+      - name: Build ARM64 image in privileged container (required by pi-gen)
         run: |
+          set -euo pipefail
           chmod +x scripts/*.sh
-          ./scripts/build-image.sh
+          HOST_UID="$(id -u)"
+          HOST_GID="$(id -g)"
+
+          # pi-gen requires root for chroot/mount/loop operations.
+          # Running inside --privileged container avoids "Please run as root".
+          sudo docker run --rm --privileged \
+            -e DEBIAN_FRONTEND=noninteractive \
+            -e HOST_UID="${HOST_UID}" \
+            -e HOST_GID="${HOST_GID}" \
+            -v "${GITHUB_WORKSPACE}:/work" \
+            -w /work \
+            debian:bookworm \
+            bash -lc '
+              apt-get update
+              apt-get install -y \
+                coreutils quilt parted qemu-user-static debootstrap zerofree zip \
+                dosfstools libarchive-tools libcap2-bin rsync xz-utils file git curl \
+                bc bison flex libssl-dev make kmod cpio sudo ca-certificates
+              ./scripts/build-image.sh
+              chown -R "${HOST_UID}:${HOST_GID}" /work/out /work/.work /work/.cache || true
+            '
 
       - name: Generate checksums
         run: |
