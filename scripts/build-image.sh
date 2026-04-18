@@ -8,18 +8,46 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK_DIR="${ROOT_DIR}/.work"
 PI_GEN_DIR="${WORK_DIR}/pi-gen"
 DEPLOY_DIR="${PI_GEN_DIR}/deploy"
-PI_GEN_REF="2026-02-12" # pinned tag/branch for reproducibility
+# Keep empty to use the repository default branch automatically.
+PI_GEN_REF=""
 
 mkdir -p "${WORK_DIR}"
 
+clone_repo_safe() {
+  local repo_url="$1"
+  local ref="$2"
+  local dest="$3"
+  local default_branch=""
+
+  rm -rf "${dest}"
+  git clone "${repo_url}" "${dest}" || exit 1
+
+  pushd "${dest}" >/dev/null
+
+  default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}' || true)"
+
+  if [[ -n "${ref}" ]]; then
+    if git fetch --all --tags && git rev-parse --verify "${ref}" >/dev/null 2>&1; then
+      git checkout "${ref}" || true
+      echo "[INFO] Using ref ${ref}"
+    else
+      echo "[WARN] Invalid ref '${ref}'"
+      if [[ -n "${default_branch}" ]]; then
+        git checkout "${default_branch}" || true
+        echo "[INFO] Fallback to default branch '${default_branch}'"
+      fi
+    fi
+  elif [[ -n "${default_branch}" ]]; then
+    git checkout "${default_branch}" || true
+    echo "[INFO] Using default branch '${default_branch}'"
+  fi
+
+  popd >/dev/null
+}
+
 "${ROOT_DIR}/scripts/retrieve_sources.sh"
 
-if [[ ! -d "${PI_GEN_DIR}/.git" ]]; then
-  git clone https://github.com/RPi-Distro/pi-gen.git "${PI_GEN_DIR}"
-fi
-
-git -C "${PI_GEN_DIR}" fetch --tags --force
-git -C "${PI_GEN_DIR}" checkout "${PI_GEN_REF}"
+clone_repo_safe "https://github.com/RPi-Distro/pi-gen.git" "${PI_GEN_REF}" "${PI_GEN_DIR}"
 
 # Inject custom stage with package installs + desktop customization.
 rm -rf "${PI_GEN_DIR}/stage-pearos"
