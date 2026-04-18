@@ -23,35 +23,42 @@ jobs:
           path: .cache/theme-sources
           key: ${{ runner.os }}-theme-sources-${{ hashFiles('scripts/retrieve_sources.sh') }}
 
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            coreutils quilt parted qemu-user-static debootstrap zerofree zip \
-            dosfstools libarchive-tools libcap2-bin rsync xz-utils file git curl \
-            bc bison flex libssl-dev make kmod cpio
-
-      - name: Build ARM64 image
+      - name: Enable binfmt on runner for ARM emulation
         run: |
           set -euo pipefail
-          ROOT_DIR="${GITHUB_WORKSPACE}"
-          PI_GEN_DIR="${ROOT_DIR}/.work/pi-gen"
+          docker run --rm --privileged tonistiigi/binfmt --install arm64
 
-          # Run from the repository root so relative paths in scripts are stable.
-          cd "${ROOT_DIR}"
-          chmod +x scripts/*.sh
-          ./scripts/build-image.sh
+      - name: Build ARM64 image in privileged container
+        run: |
+          set -euo pipefail
+          # pi-gen needs root + privileged kernel features (chroot, mounts, loop devices).
+          # Run the build in a privileged Docker container instead of directly on the host runner.
+          docker run --rm --privileged \
+            -e DEBIAN_FRONTEND=noninteractive \
+            -v "${GITHUB_WORKSPACE}:/work" \
+            -w /work \
+            debian:bookworm bash -euxo pipefail -c "
+              apt-get update
+              apt-get install -y \
+                coreutils quilt parted qemu-user-static binfmt-support debootstrap zerofree zip \
+                dosfstools libarchive-tools libcap2-bin rsync xz-utils file git curl sudo \
+                bc bison flex libssl-dev make kmod cpio
 
-          # Fail fast if pi-gen did not produce expected deployment output.
-          # This usually means build.sh failed before packaging finished.
-          if [ ! -d "${PI_GEN_DIR}/deploy" ]; then
-            echo "[ERROR] pi-gen deploy directory missing at ${PI_GEN_DIR}/deploy"
-            if [ -f "${PI_GEN_DIR}/build.log" ]; then
-              echo "[INFO] Last 200 lines from pi-gen build.log:"
-              tail -n 200 "${PI_GEN_DIR}/build.log"
-            fi
-            exit 1
-          fi
+              update-binfmts --enable qemu-aarch64 || true
+
+              chmod +x scripts/*.sh
+              ./scripts/build-image.sh
+
+              # Fail fast with explicit diagnostics if pi-gen output was not produced.
+              if [ ! -d .work/pi-gen/deploy ]; then
+                echo '[ERROR] pi-gen deploy directory missing at /work/.work/pi-gen/deploy'
+                if [ -f .work/pi-gen/build.log ]; then
+                  echo '[INFO] Last 200 lines from pi-gen build.log:'
+                  tail -n 200 .work/pi-gen/build.log
+                fi
+                exit 1
+              fi
+            "
 
       - name: Debug pi-gen output paths
         if: always()
