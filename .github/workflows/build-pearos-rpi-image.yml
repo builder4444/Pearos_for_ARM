@@ -26,7 +26,8 @@ jobs:
       - name: Enable binfmt on runner for ARM emulation
         run: |
           set -euo pipefail
-          docker run --rm --privileged tonistiigi/binfmt --install arm64
+          # pi-gen requires both arm64 and armhf binfmt handlers during the build pipeline.
+          docker run --rm --privileged tonistiigi/binfmt --install arm64,arm
 
       - name: Build ARM64 image in privileged container
         run: |
@@ -45,9 +46,11 @@ jobs:
                 bc bison flex libssl-dev make kmod cpio xxd pigz
 
               update-binfmts --enable qemu-aarch64 || true
+              update-binfmts --enable qemu-arm || true
 
               # pi-gen checks for these tools explicitly; fail early with a clear message.
               command -v qemu-aarch64-static >/dev/null || command -v qemu-aarch64 >/dev/null
+              command -v qemu-arm-static >/dev/null || command -v qemu-arm >/dev/null
               command -v xxd >/dev/null
               command -v pigz >/dev/null
 
