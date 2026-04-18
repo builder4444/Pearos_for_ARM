@@ -33,15 +33,75 @@ jobs:
 
       - name: Build ARM64 image
         run: |
+          set -euo pipefail
+          ROOT_DIR="${GITHUB_WORKSPACE}"
+          PI_GEN_DIR="${ROOT_DIR}/.work/pi-gen"
+
+          # Run from the repository root so relative paths in scripts are stable.
+          cd "${ROOT_DIR}"
           chmod +x scripts/*.sh
           ./scripts/build-image.sh
 
-      - name: Generate checksums
+          # Fail fast if pi-gen did not produce expected deployment output.
+          # This usually means build.sh failed before packaging finished.
+          if [ ! -d "${PI_GEN_DIR}/deploy" ]; then
+            echo "[ERROR] pi-gen deploy directory missing at ${PI_GEN_DIR}/deploy"
+            if [ -f "${PI_GEN_DIR}/build.log" ]; then
+              echo "[INFO] Last 200 lines from pi-gen build.log:"
+              tail -n 200 "${PI_GEN_DIR}/build.log"
+            fi
+            exit 1
+          fi
+
+      - name: Debug pi-gen output paths
+        if: always()
         run: |
-          cd out
+          ROOT_DIR="${GITHUB_WORKSPACE}"
+          PI_GEN_DIR="${ROOT_DIR}/.work/pi-gen"
+
+          echo "[DEBUG] Current working directory:"
+          pwd
+          echo "[DEBUG] Repository root contents:"
+          ls -lah "${ROOT_DIR}"
+          echo "[DEBUG] pi-gen directory contents (if present):"
+          ls -lah "${PI_GEN_DIR}" || true
+
+          if [ -f "${PI_GEN_DIR}/build.log" ]; then
+            echo "[DEBUG] Last 200 lines of pi-gen build.log:"
+            tail -n 200 "${PI_GEN_DIR}/build.log"
+          else
+            echo "[DEBUG] pi-gen build.log not found at ${PI_GEN_DIR}/build.log"
+          fi
+
+      - name: Generate checksums
+        if: success()
+        run: |
+          set -euo pipefail
+          ROOT_DIR="${GITHUB_WORKSPACE}"
+
+          echo "[DEBUG] Current working directory:"
+          pwd
+          echo "[DEBUG] Files in repository root:"
+          ls -lah "${ROOT_DIR}"
+
+          # out/ is created only after a successful pi-gen build and copy step.
+          # If it is missing, fail with a clear error instead of crashing on cd.
+          if [ -d "${ROOT_DIR}/out" ]; then
+            cd "${ROOT_DIR}/out"
+          else
+            echo "[ERROR] Output directory not found. Build likely failed."
+            PI_GEN_DIR="${ROOT_DIR}/.work/pi-gen"
+            if [ -f "${PI_GEN_DIR}/build.log" ]; then
+              echo "[INFO] Last 200 lines from pi-gen build.log:"
+              tail -n 200 "${PI_GEN_DIR}/build.log"
+            fi
+            exit 1
+          fi
+
           sha256sum * > SHA256SUMS
 
       - name: Upload image artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: pearos-like-rpi-image
