@@ -40,11 +40,16 @@ jobs:
             debian:bookworm bash -euxo pipefail -c "
               apt-get update
               apt-get install -y \
-                coreutils quilt parted qemu-user-static binfmt-support debootstrap zerofree zip \
+                coreutils quilt parted qemu-user-static qemu-user-binfmt binfmt-support debootstrap zerofree zip \
                 dosfstools libarchive-tools libcap2-bin rsync xz-utils file git curl sudo \
-                bc bison flex libssl-dev make kmod cpio
+                bc bison flex libssl-dev make kmod cpio xxd pigz
 
               update-binfmts --enable qemu-aarch64 || true
+
+              # pi-gen checks for these tools explicitly; fail early with a clear message.
+              command -v qemu-aarch64-static >/dev/null
+              command -v xxd >/dev/null
+              command -v pigz >/dev/null
 
               chmod +x scripts/*.sh
               ./scripts/build-image.sh
