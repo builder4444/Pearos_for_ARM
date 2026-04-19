@@ -8,8 +8,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK_DIR="${ROOT_DIR}/.work"
 PI_GEN_DIR="${WORK_DIR}/pi-gen"
 DEPLOY_DIR="${PI_GEN_DIR}/deploy"
-# Keep empty to use the repository default branch automatically.
-PI_GEN_REF=""
+# Prefer the pi-gen branch aligned with RELEASE to avoid package drift on master.
+# Can be overridden from the environment when needed.
+PI_GEN_REF="${PI_GEN_REF:-bookworm}"
 
 mkdir -p "${WORK_DIR}"
 
